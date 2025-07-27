@@ -35,17 +35,35 @@ class CheckoutAPIView(APIView):
                 )
 
             # Create shipping address
-            shipping_address = CustomerAddress.objects.create(
-                customer=customer,
-                full_name=data.get('name'),
-                phone=data.get('phone'),
-                address_line1=data.get('address_line1'),
-                address_line2=data.get('address_line2', ''),
-                city=data.get('city'),
-                state=data.get('state', ''),
-                zip_code=data.get('zip_code'),
-                country=data.get('country', 'Bangladesh')
-            )
+            shipping_address = None
+            if "address_id" in data:
+                try:
+                    shipping_address = CustomerAddress.objects.get(id=data["address_id"], customer=customer)
+                except CustomerAddress.DoesNotExist:
+                    return Response({
+                        "code": status.HTTP_404_NOT_FOUND,
+                        "success": False,
+                        "message": "Address not found"
+                    }, status=status.HTTP_404_NOT_FOUND)
+            elif "address" in data:
+                addr = data["address"]
+                shipping_address = CustomerAddress.objects.create(
+                    customer=customer,
+                    full_name=addr.get("full_name"),
+                    phone=addr.get("phone"),
+                    address_line1=addr.get("address_line1"),
+                    address_line2=addr.get("address_line2", ""),
+                    city=addr.get("city"),
+                    state=addr.get("state", ""),
+                    zip_code=addr.get("zip_code"),
+                    country=addr.get("country", "Bangladesh")
+                )
+            else:
+                return Response({
+                    "code": status.HTTP_400_BAD_REQUEST,
+                    "success": False,
+                    "message": "Either address_id or address details must be provided"
+                }, status=status.HTTP_400_BAD_REQUEST)
 
             # Create Order
             subtotal = 0
