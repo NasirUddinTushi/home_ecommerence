@@ -23,6 +23,9 @@ urlpatterns = [
 
     # Marketing
     path('api/', include('apps.marketing.urls')),
+
+    # cart
+    path ('api/', include('apps.cart.urls')),
 ]
 
 # Add media files serving during development

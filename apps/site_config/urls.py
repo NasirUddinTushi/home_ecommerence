@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import SiteConfigurationAPIView
+from .views import SiteConfigAPIView, SocialLinksAPIView
 
 urlpatterns = [
-    path('site-config/', SiteConfigurationAPIView.as_view(), name='site-config'),
+    path('site-config/', SiteConfigAPIView.as_view(), name='site-config'),
+    path('social-links/', SocialLinksAPIView.as_view(), name='social-links'),
 ]

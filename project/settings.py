@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'apps.cms',
     'apps.site_config',
     'apps.marketing',
+    'apps.cart',
 ]
 
 

@@ -2,11 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import date
 from apps.account.models import CustomerAddress
 from apps.products.models import ProductVariant
+from apps.marketing.models import Coupon, CouponUsage
 from .models import Order, OrderItem
 from .serializers import OrderSerializer
-
 
 Customer = get_user_model()
 
@@ -84,8 +86,51 @@ class CheckoutAPIView(APIView):
                 subtotal += unit_price * quantity
                 OrderItem.objects.create(order=order, product_variant=variant, quantity=quantity, unit_price=unit_price)
 
+            discount = 0
+            coupon = None
+            coupon_code = data.get("coupon_code")
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(code__iexact=coupon_code, active=True)
+                    today = date.today()
+
+                    if not (coupon.start_date <= today <= coupon.end_date):
+                        raise ValueError("Coupon not valid today.")
+
+                    if coupon.usage_limit is not None:
+                        used_count = CouponUsage.objects.filter(coupon=coupon).count()
+                        if used_count >= coupon.usage_limit:
+                            raise ValueError("This coupon has reached its usage limit.")
+
+                    if customer and coupon.per_user_limit is not None:
+                        user_used = CouponUsage.objects.filter(coupon=coupon, user=customer).count()
+                        if user_used >= coupon.per_user_limit:
+                            raise ValueError("You have already used this coupon.")
+
+                    if subtotal < coupon.min_order_amount:
+                        raise ValueError(f"Minimum order amount is {coupon.min_order_amount}")
+
+                    discount = (
+                        coupon.discount_value if coupon.discount_type == 'flat'
+                        else (coupon.discount_value / 100) * subtotal
+                    )
+
+                    CouponUsage.objects.create(
+                        coupon=coupon,
+                        user=customer if customer.is_authenticated else None
+                    )
+                except Exception as e:
+                    return Response({
+                        "code": 400,
+                        "success": False,
+                        "message": f"Coupon error: {str(e)}"
+                    }, status=400)
+
             order.subtotal_amount = subtotal
-            order.total_amount = subtotal + order.shipping_cost
+            order.discount_amount = discount
+            order.total_amount = subtotal - discount + order.shipping_cost
+            if coupon:
+                order.coupon = coupon
             order.save()
 
             response = {

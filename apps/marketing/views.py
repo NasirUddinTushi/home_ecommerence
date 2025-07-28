@@ -4,6 +4,83 @@ from rest_framework import status
 from apps.marketing.models import NewsletterSubscriber, FeaturedProduct
 from apps.marketing.serializers import NewsletterSubscriberSerializer, FeaturedProductSerializer
 
+from .models import Coupon, CouponUsage
+from .serializers import CouponValidateSerializer
+from datetime import date
+
+class CouponValidateAPIView(APIView):
+    def post(self, request):
+        serializer = CouponValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                "code": 400,
+                "success": False,
+                "message": "Validation error",
+                "errors": serializer.errors
+            }, status=400)
+
+        code = serializer.validated_data['code']
+        total = serializer.validated_data['total']
+        user = request.user if request.user.is_authenticated else None
+
+        try:
+            coupon = Coupon.objects.get(code__iexact=code, active=True)
+        except Coupon.DoesNotExist:
+            return Response({
+                "code": 404,
+                "success": False,
+                "message": "Invalid or expired coupon."
+            }, status=404)
+
+        today = date.today()
+        if not (coupon.start_date <= today <= coupon.end_date):
+            return Response({
+                "code": 400,
+                "success": False,
+                "message": "Coupon not valid today."
+            }, status=400)
+
+        if total < coupon.min_order_amount:
+            return Response({
+                "code": 400,
+                "success": False,
+                "message": f"Minimum order amount is {coupon.min_order_amount}"
+            }, status=400)
+
+        if coupon.usage_limit is not None:
+            used_count = CouponUsage.objects.filter(coupon=coupon).count()
+            if used_count >= coupon.usage_limit:
+                return Response({
+                    "code": 400,
+                    "success": False,
+                    "message": "This coupon has reached its usage limit."
+                }, status=400)
+
+        if user and coupon.per_user_limit is not None:
+            user_used = CouponUsage.objects.filter(coupon=coupon, user=user).count()
+            if user_used >= coupon.per_user_limit:
+                return Response({
+                    "code": 400,
+                    "success": False,
+                    "message": "You have already used this coupon."
+                }, status=400)
+
+        # Calculate discount
+        if coupon.discount_type == 'flat':
+            discount = coupon.discount_value
+        else:
+            discount = (coupon.discount_value / 100) * total
+
+        return Response({
+            "code": 200,
+            "success": True,
+            "message": "Coupon applied successfully.",
+            "data": {
+                "discount": float(discount),
+                "final_total": float(total - discount),
+                "coupon_code": coupon.code
+            }
+        }, status=200)
 
 
 class NewsletterSubscribeAPIView(APIView):

@@ -1,6 +1,20 @@
 from django.contrib import admin
 from .models import NewsletterSubscriber, FeaturedProduct
 
+from django.contrib import admin
+from .models import Coupon, CouponUsage
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ('code', 'discount_type', 'discount_value', 'start_date', 'end_date', 'active')
+    search_fields = ('code',)
+    list_filter = ('discount_type', 'active', 'start_date', 'end_date')
+
+
+@admin.register(CouponUsage)
+class CouponUsageAdmin(admin.ModelAdmin):
+    list_display = ('coupon', 'user', 'used_at')
+    readonly_fields = ('coupon', 'user', 'used_at')
 
 @admin.register(NewsletterSubscriber)
 class NewsletterSubscriberAdmin(admin.ModelAdmin):
