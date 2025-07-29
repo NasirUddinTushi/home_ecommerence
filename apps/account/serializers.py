@@ -7,17 +7,13 @@ Customer = get_user_model()
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    avatar_url = serializers.SerializerMethodField()
-
     class Meta:
         model = Customer
         fields = [
-            'id', 'first_name', 'last_name', 'email', 'phone',
-            'avatar_url', 'is_guest', 'is_active', 'date_joined'
+            'id', 'first_name', 'last_name', 'email',
+            'is_guest', 'is_active', 'date_joined'
         ]
 
-    def get_avatar_url(self, obj):
-        return obj.avatar.url if obj.avatar else None
 
 
 class CustomerRegisterSerializer(serializers.ModelSerializer):
@@ -25,7 +21,7 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ['first_name', 'last_name', 'email', 'phone', 'password']
+        fields = ['first_name', 'last_name', 'email', 'password']
 
     def create(self, validated_data):
         validated_data['password'] = make_password(validated_data['password'])
@@ -36,6 +32,22 @@ class CustomerAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAddress
         fields = [
-            'id', 'full_name', 'phone', 'address_line1', 'address_line2',
-            'city', 'state', 'zip_code', 'country', 'is_default'
+            'id',
+            'first_name',
+            'last_name',
+            'phone',
+            'address',
+            'city',
+            'postal_code',
+            'country',
+            'is_default'
         ]
+
+
+# Login Serializer
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        style={'input_type': 'password'},
+        trim_whitespace=False
+    )

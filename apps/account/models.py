@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from datetime import timedelta
 
 
 # Custom User Manager
@@ -32,8 +33,8 @@ class Customer(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(_("first name"), max_length=255, blank=True, null=True)
     last_name = models.CharField(_("last name"), max_length=255, blank=True, null=True)
     email = models.EmailField(_("email address"), unique=True)
-    phone = models.CharField(_("phone number"), max_length=20, blank=True, null=True)
-    avatar = models.ImageField(_("avatar"), upload_to="avatars/", blank=True, null=True)
+    # phone = models.CharField(_("phone number"), max_length=20, blank=True, null=True)
+    # avatar = models.ImageField(_("avatar"), upload_to="avatars/", blank=True, null=True)
     is_guest = models.BooleanField(default=False)  # For guest checkout
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -61,16 +62,31 @@ class Customer(AbstractBaseUser, PermissionsMixin):
 # Customer Address Model
 class CustomerAddress(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="addresses")
-    full_name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
-    address_line1 = models.CharField(max_length=255)
-    address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    address = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100, blank=True, null=True)
-    zip_code = models.CharField(max_length=20)
+    postal_code = models.CharField(max_length=20)
     country = models.CharField(max_length=100, default="Bangladesh")
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.full_name} - {self.city}"
+        return f"{self.first_name} {self.last_name} - {self.city}"
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
+
+
+class PasswordResetCode(models.Model):
+    email = models.EmailField()
+    code = models.CharField(max_length=6)
+    reset_token = models.CharField(max_length=64, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=1)

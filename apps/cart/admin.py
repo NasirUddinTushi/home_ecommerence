@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Cart, CartItem
+from unfold.admin import ModelAdmin
 
 
 class CartItemInline(admin.TabularInline):
@@ -8,7 +9,7 @@ class CartItemInline(admin.TabularInline):
 
 
 @admin.register(Cart)
-class CartAdmin(admin.ModelAdmin):
+class CartAdmin(ModelAdmin):
     list_display = ('id', 'user', 'created_at', 'updated_at')
     list_filter = ('created_at',)
     search_fields = ('user__email',)
@@ -16,7 +17,7 @@ class CartAdmin(admin.ModelAdmin):
 
 
 @admin.register(CartItem)
-class CartItemAdmin(admin.ModelAdmin):
+class CartItemAdmin(ModelAdmin):
     list_display = ('id', 'cart', 'product_variant', 'quantity')
     list_filter = ('cart', 'product_variant')
     search_fields = ('cart__user__email', 'product_variant__product__name')

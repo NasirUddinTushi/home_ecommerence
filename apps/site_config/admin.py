@@ -1,9 +1,9 @@
 from django.contrib import admin
 from .models import SiteConfiguration, SocialLink
-
+from unfold.admin import ModelAdmin
 
 @admin.register(SiteConfiguration)
-class SiteConfigurationAdmin(admin.ModelAdmin):
+class SiteConfigurationAdmin(ModelAdmin):
     list_display = [
         'site_name',
         'site_tagline',
@@ -18,6 +18,6 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
 
 
 @admin.register(SocialLink)
-class SocialLinkAdmin(admin.ModelAdmin):
+class SocialLinkAdmin(ModelAdmin):
     list_display = ['platform', 'url']
     search_fields = ['platform']

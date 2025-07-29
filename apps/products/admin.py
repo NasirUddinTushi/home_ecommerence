@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Product, Category, ProductImage, ProductVariant, Attribute, AttributeValue, ProductVariantValue
-
+from unfold.admin import ModelAdmin
 
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
@@ -13,7 +13,7 @@ class ProductVariantInline(admin.TabularInline):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(ModelAdmin):
     list_display = ('name', 'category', 'price', 'is_featured', 'created_at')
     list_filter = ('category', 'is_featured')
     search_fields = ('name', 'description')
@@ -22,7 +22,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ModelAdmin):
     list_display = ('name', 'slug', 'created_at')
     search_fields = ('name',)
     ordering = ('name',)

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Order, OrderItem
-
+from unfold.admin import ModelAdmin
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -9,7 +9,7 @@ class OrderItemInline(admin.TabularInline):
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ModelAdmin):
     list_display = ('id', 'customer', 'payment_type', 'status', 'total_amount', 'created_at')
     list_filter = ('status', 'payment_type', 'payment_status')
     search_fields = ('customer__email', 'shipping_address__full_name')

@@ -17,7 +17,8 @@ AUTH_USER_MODEL = 'account.Customer'
 
 INSTALLED_APPS = [
     # Django apps
-    'django.contrib.admin',
+    "unfold",                
+    "django.contrib.admin",
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -140,3 +141,5 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=3),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
