@@ -2,180 +2,261 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from apps.account.models import CustomerAddress,  Customer
-from apps.account.serializers import CustomerSerializer, CustomerRegisterSerializer, CustomerAddressSerializer, LoginSerializer
-import random
-from datetime import datetime, timedelta
-from .models import PasswordResetCode
 from django.core.mail import send_mail
+from .models import Customer, PasswordResetCode, CustomerAddress
+from .serializers import (
+    CustomerRegisterSerializer,
+    CustomerSerializer,
+    LoginSerializer,
+    ProfileSerializer,
+    ChangePasswordSerializer,
+    CustomerAddressSerializer
+)
+import random
 import secrets
 
 
-
-
-Customer = get_user_model()
-
-
-
-class RegisterAPIView(APIView):
-    def post(self, request):
-        try:
-            serializer = CustomerRegisterSerializer(data=request.data)
-            if serializer.is_valid():
-                user = serializer.save()
-                tokens = get_tokens_for_user(user)
-                response = {
-                    "code": status.HTTP_201_CREATED,
-                    "success": True,
-                    "message": "Registration successful",
-                    "data": {
-                        "user": CustomerSerializer(user).data,
-                    
-                    }
-                }
-                return Response(response, status=status.HTTP_201_CREATED)
-            return Response({
-                "code": status.HTTP_400_BAD_REQUEST,
-                "success": False,
-                "message": "Validation error",
-                "errors": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({
-                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "success": False,
-                "message": f"Error during registration: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class LoginAPIView(APIView):
+# ✅ Register View
+class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
+        serializer = CustomerRegisterSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-            user = authenticate(request, email=email, password=password)
+            user = serializer.save()
+            return Response({
+                "status": status.HTTP_201_CREATED,
+                "success": True,
+                "message": "User registered successfully",
+                "data": CustomerSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
 
-            if user is not None:
-                refresh = RefreshToken.for_user(user)
-                response_data = {
-                    "status": status.HTTP_200_OK,
-                    "success": True,
+        return Response({
+            "status": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Registration failed",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ✅ Login View
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        return self._handle_login(request.data)
+
+    def get(self, request):
+        email = request.query_params.get("email")
+        password = request.query_params.get("password")
+
+        if not email or not password:
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "success": False,
+                "message": "Email and password are required in query parameters"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return self._handle_login({"email": email, "password": password})
+
+    def _handle_login(self, credentials):
+        serializer = LoginSerializer(data=credentials)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                "status": status.HTTP_200_OK,
+                "success": True,
+                "message": "Login successful",
+                "data": {
                     "user_id": user.id,
                     "email": user.email,
                     "access": str(refresh.access_token),
                     "refresh": str(refresh)
                 }
-                return Response(response_data, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                    "status": status.HTTP_401_UNAUTHORIZED,
-                    "success": False,
-                    "message": "Invalid credentials"
-                }, status=status.HTTP_401_UNAUTHORIZED)
+            }, status=status.HTTP_200_OK)
 
         return Response({
             "status": status.HTTP_400_BAD_REQUEST,
             "success": False,
             "message": "Login failed",
-            "data": serializer.errors
+            "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
-class ProfileAPIView(APIView):
-    def get(self, request):
-        try:
-            serializer = CustomerSerializer(request.user)
-            response = {
-                "code": status.HTTP_200_OK,
-                "success": True,
-                "message": "Profile fetched successfully",
-                "data": serializer.data
-            }
-            return Response(response, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({
-                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "success": False,
-                "message": f"Error fetching profile: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    # Get user profile
+    def get(self, request):
+        serializer = CustomerSerializer(request.user)
+        return Response({
+            "status": status.HTTP_200_OK,
+            "success": True,
+            "message": "Profile fetched successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    # Update user profile
     def put(self, request):
-        try:
-            serializer = CustomerSerializer(request.user, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                response = {
-                    "code": status.HTTP_200_OK,
-                    "success": True,
-                    "message": "Profile updated successfully",
-                    "data": serializer.data
-                }
-                return Response(response, status=status.HTTP_200_OK)
+        serializer = ProfileSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
             return Response({
-                "code": status.HTTP_400_BAD_REQUEST,
-                "success": False,
-                "message": "Validation error",
-                "errors": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({
-                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "success": False,
-                "message": f"Error updating profile: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class CustomerAddressAPIView(APIView):
-    def get(self, request):
-        try:
-            addresses = CustomerAddress.objects.filter(customer=request.user)
-            serializer = CustomerAddressSerializer(addresses, many=True)
-            response = {
-                "code": status.HTTP_200_OK,
+                "status": status.HTTP_200_OK,
                 "success": True,
-                "message": "Addresses fetched successfully",
+                "message": "Profile updated successfully",
                 "data": serializer.data
-            }
-            return Response(response, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({
-                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "success": False,
-                "message": f"Error fetching addresses: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "status": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Profile update failed",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Soft delete (deactivate account)
+    def delete(self, request):
+        user = request.user
+        user.is_active = False
+        user.save()
+        return Response({
+            "status": status.HTTP_200_OK,
+            "success": True,
+            "message": "Account deactivated successfully"
+        }, status=status.HTTP_200_OK)
+
+
+#CustomerAddress
+class AddressListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        addresses = CustomerAddress.objects.filter(customer=request.user)
+        serializer = CustomerAddressSerializer(addresses, many=True)
+        return Response({
+            "status": status.HTTP_200_OK,
+            "success": True,
+            "message": "Address list fetched",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
 
     def post(self, request):
+        serializer = CustomerAddressSerializer(data=request.data)
+        if serializer.is_valid():
+            has_address = CustomerAddress.objects.filter(customer=request.user).exists()
+
+
+            serializer.save(
+                customer=request.user,
+                is_default=not has_address
+                
+                )
+            return Response({
+                "status": status.HTTP_201_CREATED,
+                "success": True,
+                "message": "Address added",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            "status": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Validation error",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AddressDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk, user):
         try:
-            data = request.data.copy()
-            data['customer'] = request.user.id
-            serializer = CustomerAddressSerializer(data=data)
-            if serializer.is_valid():
-                serializer.save(customer=request.user)
-                response = {
-                    "code": status.HTTP_201_CREATED,
-                    "success": True,
-                    "message": "Address added successfully",
-                    "data": serializer.data
-                }
-                return Response(response, status=status.HTTP_201_CREATED)
+            return CustomerAddress.objects.get(pk=pk, customer=user)
+        except CustomerAddress.DoesNotExist:
+            return None
+
+    def put(self, request, pk):
+        address = self.get_object(pk, request.user)
+        if not address:
             return Response({
-                "code": status.HTTP_400_BAD_REQUEST,
+                "status": status.HTTP_404_NOT_FOUND,
                 "success": False,
-                "message": "Validation error",
-                "errors": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
+                "message": "Address not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CustomerAddressSerializer(address, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
             return Response({
-                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "status": status.HTTP_200_OK,
+                "success": True,
+                "message": "Address updated",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "status": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Validation error",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        address = self.get_object(pk, request.user)
+        if not address:
+            return Response({
+                "status": status.HTTP_404_NOT_FOUND,
                 "success": False,
-                "message": f"Error adding address: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                "message": "Address not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        address.delete()
+        return Response({
+            "status": status.HTTP_204_NO_CONTENT,
+            "success": True,
+            "message": "Address deleted"
+        }, status=status.HTTP_204_NO_CONTENT)
+
+# Change Password
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            old = serializer.validated_data['old_password']
+            new = serializer.validated_data['new_password']
+
+            if not request.user.check_password(old):
+                return Response({
+                    "status": 400,
+                    "success": False,
+                    "message": "Old password is incorrect."
+                }, status=400)
+
+            request.user.set_password(new)
+            request.user.save()
+
+            return Response({
+                "status": 200,
+                "success": True,
+                "message": "Password changed successfully."
+            }, status=200)
+
+        return Response({
+            "status": 400,
+            "success": False,
+            "message": "Password change failed",
+            "errors": serializer.errors
+        }, status=400)
 
 
+
+# Send Reset Code
 class SendResetCodeView(APIView):
     permission_classes = [AllowAny]
 
@@ -188,24 +269,35 @@ class SendResetCodeView(APIView):
                 "message": "Email is required"
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            user = Customer.objects.get(email=email)
+        except Customer.DoesNotExist:
+            return Response({
+                "status": status.HTTP_404_NOT_FOUND,
+                "success": False,
+                "message": "User with this email does not exist"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        PasswordResetCode.objects.filter(email=email).delete()
+
         code = str(random.randint(100000, 999999))
-        PasswordResetCode.objects.create(email=email, code=code)
+        PasswordResetCode.objects.create(email=email, user=user, code=code)
 
         send_mail(
-            "Password Reset Code",
-            f"Your code is: {code}",
-            "no-reply@paakhi.com",
-            [email],
-            fail_silently=True,
+            subject="Your OTP Code",
+            message=f"Your code is: {code}",
+            from_email="noreply@example.com",
+            recipient_list=[email]
         )
 
         return Response({
             "status": status.HTTP_200_OK,
             "success": True,
-            "message": "Reset code sent"
+            "message": "Reset code sent to your email"
         }, status=status.HTTP_200_OK)
 
 
+# Verify Reset Code
 class VerifyResetCodeView(APIView):
     permission_classes = [AllowAny]
 
@@ -214,12 +306,13 @@ class VerifyResetCodeView(APIView):
         code = request.data.get("code")
 
         try:
-            reset = PasswordResetCode.objects.filter(email=email, code=code, is_used=False).latest("created_at")
-        except PasswordResetCode.DoesNotExist:
+            user = Customer.objects.get(email=email)
+            reset = PasswordResetCode.objects.get(user=user, code=code, is_used=False)
+        except (Customer.DoesNotExist, PasswordResetCode.DoesNotExist):
             return Response({
                 "status": status.HTTP_400_BAD_REQUEST,
                 "success": False,
-                "message": "Invalid or expired code"
+                "message": "Invalid or expired verification code."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if reset.is_expired():
@@ -243,6 +336,7 @@ class VerifyResetCodeView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# Reset Password with Token
 class ResetPasswordWithTokenView(APIView):
     permission_classes = [AllowAny]
 
@@ -255,7 +349,7 @@ class ResetPasswordWithTokenView(APIView):
             return Response({
                 "status": status.HTTP_400_BAD_REQUEST,
                 "success": False,
-                "message": "Passwords do not match"
+                "message": "Passwords do not match."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -264,7 +358,7 @@ class ResetPasswordWithTokenView(APIView):
             return Response({
                 "status": status.HTTP_400_BAD_REQUEST,
                 "success": False,
-                "message": "Invalid reset token"
+                "message": "Invalid or expired reset token."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if reset.is_expired():
@@ -274,15 +368,7 @@ class ResetPasswordWithTokenView(APIView):
                 "message": "Reset token has expired."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            user = Customer.objects.get(email=reset.email)
-        except Customer.DoesNotExist:
-            return Response({
-                "status": status.HTTP_404_NOT_FOUND,
-                "success": False,
-                "message": "User not found."
-            }, status=status.HTTP_404_NOT_FOUND)
-
+        user = reset.user
         user.set_password(password)
         user.save()
 
@@ -293,12 +379,13 @@ class ResetPasswordWithTokenView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# Logout View
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        token = request.data.get("refresh")
-        if not token:
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
             return Response({
                 "status": status.HTTP_400_BAD_REQUEST,
                 "success": False,
@@ -306,7 +393,8 @@ class LogoutView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            RefreshToken(token).blacklist()
+            token = RefreshToken(refresh_token)
+            token.blacklist()
             return Response({
                 "status": status.HTTP_200_OK,
                 "success": True,

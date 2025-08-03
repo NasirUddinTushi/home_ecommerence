@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from datetime import timedelta
+from django.conf import settings
 
 
 # Custom User Manager
@@ -20,9 +21,9 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
-        if extra_fields.get("is_staff") is not True:
+        if not extra_fields.get("is_staff"):
             raise ValueError("Superuser must have is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
+        if not extra_fields.get("is_superuser"):
             raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
@@ -33,9 +34,8 @@ class Customer(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(_("first name"), max_length=255, blank=True, null=True)
     last_name = models.CharField(_("last name"), max_length=255, blank=True, null=True)
     email = models.EmailField(_("email address"), unique=True)
-    # phone = models.CharField(_("phone number"), max_length=20, blank=True, null=True)
-    # avatar = models.ImageField(_("avatar"), upload_to="avatars/", blank=True, null=True)
-    is_guest = models.BooleanField(default=False)  # For guest checkout
+    phone = models.CharField(_("phone number"), max_length=20, blank=True, null=True)
+    is_guest = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -47,11 +47,7 @@ class Customer(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     def __str__(self):
-        return self.first_name if self.first_name else self.email
-
-    @property
-    def avatar_url(self):
-        return self.avatar.url if self.avatar else None
+        return self.first_name or self.email
 
     class Meta:
         verbose_name = _("customer")
@@ -80,8 +76,9 @@ class CustomerAddress(models.Model):
         return f"{self.first_name} {self.last_name}".strip()
 
 
-
+# Password Reset Code Model
 class PasswordResetCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reset_codes")
     email = models.EmailField()
     code = models.CharField(max_length=6)
     reset_token = models.CharField(max_length=64, null=True, blank=True)
@@ -89,4 +86,7 @@ class PasswordResetCode(models.Model):
     is_used = models.BooleanField(default=False)
 
     def is_expired(self):
-        return timezone.now() > self.created_at + timedelta(minutes=1)
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+    def __str__(self):
+        return f"Reset code for {self.email} at {self.created_at}"
