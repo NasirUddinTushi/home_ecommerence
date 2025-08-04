@@ -384,25 +384,8 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        refresh_token = request.data.get("refresh")
-        if not refresh_token:
-            return Response({
-                "status": status.HTTP_400_BAD_REQUEST,
-                "success": False,
-                "message": "Refresh token is required."
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({
-                "status": status.HTTP_200_OK,
-                "success": True,
-                "message": "Logout successful."
-            }, status=status.HTTP_200_OK)
-        except Exception:
-            return Response({
-                "status": status.HTTP_400_BAD_REQUEST,
-                "success": False,
-                "message": "Invalid token or token already blacklisted."
-            }, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "status": status.HTTP_200_OK,
+            "success": True,
+            "message": "Logout successful. Please delete the access token from client."
+        }, status=status.HTTP_200_OK)
