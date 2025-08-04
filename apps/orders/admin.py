@@ -1,6 +1,12 @@
 from django.contrib import admin
 from .models import Order, OrderItem
 from unfold.admin import ModelAdmin
+from django.contrib.auth.models import Group
+from django.contrib import admin
+
+admin.site.unregister(Group)
+
+
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -29,3 +35,11 @@ class OrderAdmin(ModelAdmin):
             'fields': ('status', 'created_at')
         }),
     )
+
+@admin.register(OrderItem)
+class OrderItemAdmin(ModelAdmin):
+    list_display = ('id', 'order', 'product_variant', 'quantity', 'unit_price')
+    search_fields = ('order__id', 'product_variant__product__name')
+    list_filter = ('product_variant',)
+    ordering = ('-id',)
+
