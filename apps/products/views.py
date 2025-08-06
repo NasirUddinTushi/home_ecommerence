@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from apps.products.models import Product, Category
-from apps.products.serializers import ProductSerializer, CategorySerializer
+from apps.products.serializers import ProductSerializer, CategorySerializer, RecursiveCategorySerializer
 
 
 class ProductListAPIView(APIView):
@@ -70,25 +70,24 @@ class FeaturedProductListAPIView(APIView):
                 "message": f"Error fetching featured products: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class CategoryListAPIView(APIView):
     def get(self, request):
         try:
-            categories = Category.objects.all().order_by('name')
-            serializer = CategorySerializer(categories, many=True)
-            response = {
-                "code": status.HTTP_200_OK,
+            categories = Category.objects.filter(parent__isnull=True).order_by('name')  # Only top-level
+            serializer = RecursiveCategorySerializer(categories, many=True)
+            return Response({
+                "code": 200,
                 "success": True,
                 "message": "Category list fetched successfully",
                 "data": serializer.data
-            }
-            return Response(response, status=status.HTTP_200_OK)
+            }, status=200)
         except Exception as e:
             return Response({
-                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "code": 500,
                 "success": False,
                 "message": f"Error fetching categories: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            }, status=500)
+
 
 
 class CategoryDetailAPIView(APIView):

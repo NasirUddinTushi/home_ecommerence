@@ -24,18 +24,56 @@ class ProductVariantSerializer(serializers.ModelSerializer):
         model = ProductVariant
         fields = ['id', 'sku', 'stock', 'price_override', 'variant_values']
 
+class ProductCategoryInlineSerializer(serializers.ModelSerializer):
+    parent = serializers.StringRelatedField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'parent']
 
 class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    category = ProductCategoryInlineSerializer(read_only=True) 
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'slug', 'description', 'category_name', 'price', 'is_featured', 'images', 'variants']
+        fields = [
+            'id',
+            'name',
+            'slug',
+            'description',
+            'category',    
+            'price',
+            'is_featured',
+            'images',
+            'variants'
+        ]
 
 
-class CategorySerializer(serializers.ModelSerializer):
+
+class SubCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', 'slug']
+
+class CategorySerializer(serializers.ModelSerializer):
+    subcategories = SubCategorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'subcategories']
+
+# Multilevel sub-category
+
+class RecursiveCategorySerializer(serializers.ModelSerializer):
+    subcategories = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'subcategories']
+
+    def get_subcategories(self, obj):
+        if obj.subcategories.exists():
+            return RecursiveCategorySerializer(obj.subcategories.all(), many=True).data
+        return []

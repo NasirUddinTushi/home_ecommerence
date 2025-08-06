@@ -23,9 +23,11 @@ class ProductAdmin(ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(ModelAdmin):
-    list_display = ('name', 'slug', 'created_at')
+    list_display = ('name', 'slug', 'parent', 'created_at')
     search_fields = ('name',)
+    list_filter = ('parent',)
     ordering = ('name',)
+
 
 
 admin.site.register(Attribute)

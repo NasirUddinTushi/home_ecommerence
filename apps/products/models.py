@@ -5,6 +5,7 @@ from django.utils.text import slugify
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -18,6 +19,7 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+
 
 
 class Product(models.Model):
