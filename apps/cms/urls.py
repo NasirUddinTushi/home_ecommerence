@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     TestimonialListAPIView, BlogListAPIView, BlogDetailAPIView,
-    InfoPageDetailAPIView, HomeSectionListAPIView
+    InfoPageDetailAPIView, HomeSectionListAPIView, ContactUsAPIView
 )
 
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path('cms/blogs/<slug:slug>/', BlogDetailAPIView.as_view(), name='blog-detail'),
     path('cms/pages/<slug:slug>/', InfoPageDetailAPIView.as_view(), name='info-page'),
     path('cms/home-sections/', HomeSectionListAPIView.as_view(), name='home-sections'),
+    path('contact/', ContactUsAPIView.as_view(), name='contact-us'),
 ]

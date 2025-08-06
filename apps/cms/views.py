@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from apps.cms.models import Testimonial, BlogPost, InfoPage, HomeSection
 from apps.cms.serializers import (
-    TestimonialSerializer, BlogPostSerializer, InfoPageSerializer, HomeSectionSerializer
+    TestimonialSerializer, BlogPostSerializer, InfoPageSerializer, HomeSectionSerializer, ContactMessageSerializer
 )
 
 
@@ -118,3 +118,21 @@ class HomeSectionListAPIView(APIView):
                 "success": False,
                 "message": f"Error fetching home sections: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ContactUsAPIView(APIView):
+    def post(self, request):
+        serializer = ContactMessageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "code": 201,
+                "success": True,
+                "message": "Message sent successfully!"
+            }, status=201)
+        return Response({
+            "code": 400,
+            "success": False,
+            "message": "Validation failed",
+            "errors": serializer.errors
+        }, status=400)

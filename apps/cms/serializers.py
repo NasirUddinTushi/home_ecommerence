@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Testimonial, BlogPost, BlogAuthor, InfoPage, HomeSection
+from .models import Testimonial, BlogPost, BlogAuthor, InfoPage, HomeSection, ContactMessage
 
 
 class TestimonialSerializer(serializers.ModelSerializer):
@@ -32,3 +32,9 @@ class HomeSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = HomeSection
         fields = ['id', 'title', 'content', 'image', 'order']
+
+
+class ContactMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactMessage
+        fields = ['name', 'email', 'message']

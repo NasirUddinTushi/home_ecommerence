@@ -6,29 +6,36 @@ from apps.account.serializers import CustomerAddressSerializer, CustomerSerializ
 
 
 # Product variant display serializer (readonly)
+
 class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
         fields = ['id', 'product', 'price_override']
 
 
-# Order Item Serializer (readonly)
+
+# Order item serializer (readonly)
+
 class OrderItemSerializer(serializers.ModelSerializer):
     product_variant = ProductVariantSerializer(read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ['product_variant', 'quantity', 'unit_price']
+        fields = ['product_variant', 'quantity', 'unit_price', 'attributes']  # ✅ attributes added
 
 
-# Coupon Serializer (readonly)
+
+# Coupon serializer (readonly)
+
 class CouponSerializer(serializers.ModelSerializer):
     class Meta:
         model = Coupon
         fields = ['code', 'discount_type', 'discount_value']
 
 
-# Read-only Order Serializer for display
+
+# Order serializer (readonly)
+
 class OrderSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
     shipping_address = CustomerAddressSerializer(read_only=True)
@@ -75,7 +82,9 @@ class OrderSerializer(serializers.ModelSerializer):
         return str(obj.shipping_cost)
 
 
-# Inline serializer for address during checkout
+
+# Inline serializer for address (optional use)
+
 class CustomerAddressInlineSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=255)
     last_name = serializers.CharField(max_length=255)
@@ -86,15 +95,44 @@ class CustomerAddressInlineSerializer(serializers.Serializer):
     country = serializers.CharField(max_length=100)
 
 
-# Input serializer for checkout
-class OrderCreateSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=False)
-    name = serializers.CharField(required=False)
-    phone = serializers.CharField(required=False)
-    payment_type = serializers.ChoiceField(choices=['COD', 'ONLINE'])
-    address = CustomerAddressInlineSerializer(required=False)
-    address_id = serializers.IntegerField(required=False)
-    items = serializers.ListSerializer(
-        child=serializers.DictField(), allow_empty=False
+# Input serializer for Checkout Payload
+
+
+class ShippingInfoSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    firstName = serializers.CharField()
+    lastName = serializers.CharField()
+    address = serializers.CharField()
+    city = serializers.CharField()
+    country = serializers.CharField()
+    postalCode = serializers.CharField()
+    paymentMethod = serializers.ChoiceField(choices=['Cash', 'Bkash', 'Nagad', 'Rocket'])
+
+
+class CustomerPayloadSerializer(serializers.Serializer):
+    customer_id = serializers.IntegerField(allow_null=True)
+    shipping_info = ShippingInfoSerializer()
+
+
+class OrderItemInputSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField()
+    unit_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    attributes = serializers.DictField(
+        child=serializers.IntegerField(), required=False
     )
-    coupon_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class SummarySerializer(serializers.Serializer):
+    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2)
+    delivery = serializers.DecimalField(max_digits=10, decimal_places=2)
+    discount_code = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    discount_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class OrderCreateSerializer(serializers.Serializer):
+    customer_payload = CustomerPayloadSerializer()
+    payment_method = serializers.ChoiceField(choices=['Cash', 'Bkash', 'Nagad', 'Rocket'])
+    order_items = OrderItemInputSerializer(many=True)
+    summary = SummarySerializer()

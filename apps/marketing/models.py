@@ -26,14 +26,15 @@ class Coupon(models.Model):
 
 class CouponUsage(models.Model):
     coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE) 
     used_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('coupon', 'user')
 
     def __str__(self):
-        return f"{self.user.email} used {self.coupon.code}"
+        return f"{self.user.email if self.user else 'Guest'} used {self.coupon.code}"
+
 
 
 class NewsletterSubscriber(models.Model):
