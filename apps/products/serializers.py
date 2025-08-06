@@ -25,7 +25,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
         fields = ['id', 'sku', 'stock', 'price_override', 'variant_values']
 
 class ProductCategoryInlineSerializer(serializers.ModelSerializer):
-    parent = serializers.StringRelatedField()
+    parent = serializers.StringRelatedField(allow_null=True)
 
     class Meta:
         model = Category
