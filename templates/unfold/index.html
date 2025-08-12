@@ -122,11 +122,12 @@
           {# bars scaled by trend_max #}
           {% for p in trend %}
             {% with h=p.count|floatformat:0 %}
-              <div class="bar {% if forloop.counter0|divisibleby:2 %}muted{% endif %}"
-                   title="{{ p.date|date:'M d' }} — {{ p.count }} orders"
-                   style="height: {{ p.count|floatformat:0|add:'0'|floatformat:0|default_if_none:'0'|floatformat:0 }}px;
-                          height: calc( ({{ p.count }} / {{ trend_max }}) * 100% );">
-              </div>
+                    <div class="bar {% if forloop.counter0|divisibleby:2 %}muted{% endif %}"
+                            title="{{ p.date|date:'M d' }} — {{ p.count|default_if_none:0 }} orders"
+                            style="height: calc({{ p.count|default_if_none:0 }}/{{ trend_max|default_if_none:1 }}*100%);">
+                    </div>
+
+
             {% endwith %}
           {% endfor %}
         </div>

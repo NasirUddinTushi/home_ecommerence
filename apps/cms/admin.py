@@ -35,6 +35,6 @@ class HomeSectionAdmin(ModelAdmin):
     ordering = ('order',)
 
 @admin.register(ContactMessage)
-class ContactMessageAdmin(admin.ModelAdmin):
+class ContactMessageAdmin(ModelAdmin):
     list_display = ('name', 'email', 'submitted_at')
     search_fields = ('name', 'email', 'message')

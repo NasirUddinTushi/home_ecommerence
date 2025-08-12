@@ -18,7 +18,7 @@ import random
 import secrets
 
 
-# ✅ Register View
+# Register View
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -41,7 +41,7 @@ class RegisterView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ✅ Login View
+# Login View
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -75,7 +75,7 @@ class LoginView(APIView):
                     "user_id": user.id,
                     "email": user.email,
                     "access": str(refresh.access_token),
-                    "refresh": str(refresh)
+                    # "refresh": str(refresh)
                 }
             }, status=status.HTTP_200_OK)
 

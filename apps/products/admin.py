@@ -30,6 +30,26 @@ class CategoryAdmin(ModelAdmin):
 
 
 
-admin.site.register(Attribute)
-admin.site.register(AttributeValue)
-admin.site.register(ProductVariantValue)
+@admin.register(Attribute)
+class AttributeAdmin(ModelAdmin):
+    list_display = ("name", "created_at")
+    search_fields = ("name",)
+    ordering = ("name",)
+
+
+@admin.register(AttributeValue)
+class AttributeValueAdmin(ModelAdmin):
+    list_display = ("attribute", "value")
+    search_fields = ("value", "attribute__name")
+    list_filter = ("attribute",)
+    ordering = ("attribute", "value")
+    list_select_related = ("attribute",)  # perf
+
+
+@admin.register(ProductVariantValue)
+class ProductVariantValueAdmin(ModelAdmin):
+    list_display = ("variant", "attribute_value")
+    search_fields = ("variant__sku", "attribute_value__value", "attribute_value__attribute__name")
+    list_filter = ("attribute_value__attribute", "variant__product")
+    ordering = ("variant",)
+    list_select_related = ("variant", "attribute_value")  # perf

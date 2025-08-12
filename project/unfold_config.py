@@ -89,6 +89,12 @@ UNFOLD = {
                         "icon": "view_quilt",
                         "link": reverse_lazy("admin:cms_homesection_changelist"),
                     },
+
+                    {
+                        "title": _("Contacts Us"),
+                        "icon": "view_quilt",
+                        "link": reverse_lazy("admin:cms_contactmessage_changelist"),
+                    },
                 ],
             },
             {
