@@ -1,5 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
+import os
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 from project.unfold_config import UNFOLD
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,8 +20,8 @@ AUTH_USER_MODEL = 'account.Customer'
 
 INSTALLED_APPS = [
     # Django apps
-    "unfold",                
-    "django.contrib.admin",
+    "unfold",
+    "project.apps.MyAdminConfig",        
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -56,7 +58,7 @@ ROOT_URLCONF = 'project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

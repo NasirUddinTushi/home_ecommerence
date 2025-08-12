@@ -13,6 +13,17 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
+                    "title": _("Overview"),
+                    "collapsible": False,
+                    "items": [
+                        {
+                            "title": _("Dashboard"),
+                            "icon": "dashboard",
+                            "link": reverse_lazy("admin:index"), 
+                        },
+                    ],
+                },
+            {
                 "title": _("Accounts"),
                 "collapsible": False,
                 "items": [
